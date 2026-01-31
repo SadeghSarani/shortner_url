@@ -1,0 +1,40 @@
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "2110:80"
+    networks:
+      - shortner_url
+    depends_on:
+      - mysql
+    volumes:
+      - ./:/var/www/html
+
+  mysql:
+    image: mysql:latest
+    environment:
+      - MYSQL_ROOT_PASSWORD=12345678
+      - MYSQL_DATABASE=shortner_url
+    networks:
+      - shortner_url
+    volumes:
+      - ./mysql-data:/var/lib/mysql
+
+  shortner_url_phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    container_name: "shortner_url_panel_phpmyadmin1"
+    restart: always
+    ports:
+      - "2686:80"
+    environment:
+      PMA_HOST: mysql
+      PMA_PORT: 3306
+      UPLOAD_LIMIT: 600M
+    networks:
+      - shortner_url
+
+networks:
+  shortner_url:
+    driver: bridge
