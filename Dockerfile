@@ -37,12 +37,13 @@ RUN a2enmod rewrite
 RUN curl -sS https://getcomposer.org/installer | php \
     -- --install-dir=/usr/local/bin --filename=composer
 
+# ✅ COPY ENTRYPOINT FIRST
 COPY docker/entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
 
-ENTRYPOINT ["entrypoint.sh"]
-CMD ["apache2-foreground"]
-
 ENV COMPOSER_ALLOW_SUPERUSER=1
+
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
+CMD ["apache2-foreground"]
 
 EXPOSE 80
