@@ -1,11 +1,38 @@
 #!/bin/sh
 set -e
 
-echo "Laravel container started"
-
 cd /var/www/html
 
-# Wait for MySQL
+echo "Laravel container started"
+
+if [ ! -f ".env" ]; then
+  echo ".env not found, creating from .env.example"
+  cp .env.example .env
+fi
+
+set_env () {
+  KEY=$1
+  VALUE=$2
+
+  if grep -q "^$KEY=" .env; then
+    sed -i "s|^$KEY=.*|$KEY=$VALUE|" .env
+  else
+    echo "$KEY=$VALUE" >> .env
+  fi
+}
+
+set_env DB_CONNECTION "${DB_CONNECTION}"
+set_env DB_HOST "${DB_HOST}"
+set_env DB_PORT "${DB_PORT}"
+set_env DB_DATABASE "${DB_DATABASE}"
+set_env DB_USERNAME "${DB_USERNAME}"
+set_env DB_PASSWORD "${DB_PASSWORD}"
+
+if ! grep -q "^APP_KEY=" .env || grep -q "^APP_KEY=$" .env; then
+  echo "Generating APP_KEY..."
+  php artisan key:generate --force
+fi
+
 echo "Waiting for MySQL..."
 until php -r "
 try {
@@ -23,7 +50,6 @@ done
 
 echo "MySQL is ready"
 
-# Install dependencies if missing
 if [ ! -d "vendor" ]; then
   echo "Installing composer dependencies..."
   composer install --no-interaction --prefer-dist
@@ -32,13 +58,9 @@ fi
 chown -R www-data:www-data storage bootstrap/cache
 chmod -R 775 storage bootstrap/cache
 
-echo "Running artisan commands..."
-
 php artisan migrate --force
 php artisan optimize:clear
-php artisan config:clear
-php artisan key:generate
 
-echo "Artisan commands finished"
+echo "Laravel ready"
 
 exec "$@"
