@@ -5,11 +5,19 @@ cd /var/www/html
 
 echo "Laravel container started"
 
+# 1. Create .env if missing
 if [ ! -f ".env" ]; then
   echo ".env not found, creating from .env.example"
   cp .env.example .env
 fi
 
+# 2. Install composer dependencies FIRST
+if [ ! -d "vendor" ]; then
+  echo "Installing composer dependencies..."
+  composer install --no-interaction --prefer-dist
+fi
+
+# 3. Inject DB environment variables into .env
 set_env () {
   KEY=$1
   VALUE=$2
@@ -28,11 +36,13 @@ set_env DB_DATABASE "${DB_DATABASE}"
 set_env DB_USERNAME "${DB_USERNAME}"
 set_env DB_PASSWORD "${DB_PASSWORD}"
 
+# 4. Generate APP_KEY if missing
 if ! grep -q "^APP_KEY=" .env || grep -q "^APP_KEY=$" .env; then
   echo "Generating APP_KEY..."
   php artisan key:generate --force
 fi
 
+# 5. Wait for MySQL
 echo "Waiting for MySQL..."
 until php -r "
 try {
@@ -50,14 +60,11 @@ done
 
 echo "MySQL is ready"
 
-if [ ! -d "vendor" ]; then
-  echo "Installing composer dependencies..."
-  composer install --no-interaction --prefer-dist
-fi
-
+# 6. Permissions
 chown -R www-data:www-data storage bootstrap/cache
 chmod -R 775 storage bootstrap/cache
 
+# 7. Run migrations
 php artisan migrate --force
 php artisan optimize:clear
 
